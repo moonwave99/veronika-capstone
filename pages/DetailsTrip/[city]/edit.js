@@ -18,18 +18,29 @@ import {
 } from "@/src/components/CityCreateForm/StyledCityCreate";
 import Header from "@/src/components/Header/Header";
 import CreatePlace from "@/src/components/Place";
-import CreateHotel from "@/src/components/Hotel";
+
 import CreateFood from "@/src/components/Food";
+import HotelList from "@/src/components/HotelList";
 
 export default function EditCity() {
   const router = useRouter();
   const cityId = router.query.city;
-  const findCityByID = useAppStore((state) => state.findCityByID);
-  const updateCity = useAppStore((state) => state.updateCity);
-  const city = findCityByID(cityId);
-  const [hotels, setHotels] = useState([
-    { id: uuidv4(), hotel: "", hotelPrice: "" },
-  ]);
+  const { updateHotels } = useAppStore();
+
+  const city = useAppStore((state) => {
+    const countries = state.countries;
+    const cities = countries
+      .map((country) =>
+        country.cities.map((city) => ({
+          ...city,
+          country: country.country,
+        }))
+      )
+      .flat();
+    return cities.find((city) => city.id === cityId);
+  });
+
+  const { updateCity } = useAppStore();
 
   const [places, setPlaces] = useState([
     { id: uuidv4(), place: "", placePrice: "" },
@@ -38,42 +49,21 @@ export default function EditCity() {
     { id: uuidv4(), foodName: "", foodPrice: "" },
   ]);
 
-  useEffect(() => {
-    if (!city) {
-      return;
-    }
-    setHotels(city.hotels);
-    setPlaces(city.places);
-    setFood(city.food);
-  }, [city]);
+  if (!city) {
+    return null;
+  }
 
   function handleSubmit(event) {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.target));
 
-    updateCity(cityId, { ...data, hotels, places, food });
-    // console.log("Update:", data);
+    updateCity(cityId, { ...data, places, food });
     event.target.reset();
     router.push("/");
   }
 
-  if (!city) {
-    return null;
-  }
-  function handleHotelClick() {
-    setHotels([...hotels, { id: uuidv4(), hotel: "", hotelPrice: "" }]);
-  }
-
   function handleHotelChange(newHotel) {
-    console.log("Hotel", newHotel);
-    setHotels(
-      hotels.map((hotel) => {
-        if (hotel.id === newHotel.id) {
-          return newHotel;
-        }
-        return hotel;
-      })
-    );
+    updateHotels(cityId, newHotel);
   }
 
   function handlePlaceClick() {
@@ -146,18 +136,8 @@ export default function EditCity() {
         </StyledDiv>
         <StyledSection>
           <StyledDivSection>
-            {hotels.map((hotel) => (
-              <CreateHotel
-                key={hotel.hotel}
-                hotel={hotel}
-                handleHotelChange={handleHotelChange}
-              />
-            ))}
+            <HotelList city={city} handleHotelChange={handleHotelChange} />
           </StyledDivSection>
-
-          <StyledButton type="button" onClick={handleHotelClick}>
-            Add
-          </StyledButton>
         </StyledSection>
 
         <StyledSection>
